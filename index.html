@@ -1,0 +1,1167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Speco vs. The Field — Cloud VMS Savings Tool</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<style>
+  :root{
+    --bg: #0A1220;
+    --bg-grid: #0D1B2E;
+    --panel: #101B2E;
+    --panel-2: #0C1626;
+    --border: #1F3049;
+    --border-soft: #182640;
+    --text: #EAF1FA;
+    --text-dim: #92A6C2;
+    --text-faint: #5B7092;
+    --speco: #2FE0B0;
+    --speco-dim: #163B33;
+    --rival: #FF6B6B;
+    --rival-dim: #3B1E22;
+    --gold: #FFC15E;
+    --blue: #4C8CFF;
+    --radius: 10px;
+    --mono: 'JetBrains Mono', monospace;
+    --sans: 'Inter', -apple-system, sans-serif;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{
+    background:
+      radial-gradient(ellipse 1200px 600px at 15% -10%, rgba(76,140,255,0.10), transparent 60%),
+      radial-gradient(ellipse 900px 500px at 100% 10%, rgba(47,224,176,0.08), transparent 55%),
+      var(--bg);
+    color:var(--text);
+    font-family:var(--sans);
+    min-height:100vh;
+    -webkit-font-smoothing:antialiased;
+  }
+  ::selection{ background: var(--speco); color:#04140F; }
+  a{color:inherit;}
+
+  /* ---------- NAV ---------- */
+  .nav{
+    position:sticky; top:0; z-index:50;
+    display:flex; align-items:center; justify-content:space-between;
+    padding:14px 28px;
+    background:rgba(10,18,32,0.86);
+    backdrop-filter:blur(10px);
+    border-bottom:1px solid var(--border-soft);
+  }
+  .brand{ display:flex; align-items:center; gap:10px; }
+  .brand-mark{
+    width:30px; height:30px; border-radius:7px;
+    background: linear-gradient(135deg, var(--speco), #17A98A);
+    display:flex; align-items:center; justify-content:center;
+    font-family:var(--mono); font-weight:800; color:#04140F; font-size:14px;
+    box-shadow: 0 0 20px rgba(47,224,176,0.35);
+  }
+  .brand-text{ font-weight:800; letter-spacing:0.02em; font-size:15px; }
+  .brand-text span{ color:var(--text-dim); font-weight:500; }
+  .tabs{ display:flex; gap:4px; background:var(--panel-2); padding:4px; border-radius:9px; border:1px solid var(--border-soft); }
+  .tab{
+    padding:8px 16px; font-size:13px; font-weight:600; color:var(--text-dim);
+    border-radius:6px; cursor:pointer; transition:all .15s ease; user-select:none;
+    border:1px solid transparent;
+  }
+  .tab:hover{ color:var(--text); }
+  .tab.active{ background:var(--panel); color:var(--speco); border-color:var(--border); }
+  .nav-note{ font-size:11px; color:var(--text-faint); font-family:var(--mono); display:flex; align-items:center; gap:6px; }
+  .dot{ width:6px; height:6px; border-radius:50%; background:var(--speco); box-shadow:0 0 8px var(--speco); animation:pulse 2s infinite; }
+  @keyframes pulse{ 0%,100%{opacity:1} 50%{opacity:.35} }
+
+  .wrap{ max-width:1180px; margin:0 auto; padding:40px 28px 100px; }
+  .view{ display:none; }
+  .view.active{ display:block; animation:fade .35s ease; }
+  @keyframes fade{ from{opacity:0; transform:translateY(6px)} to{opacity:1; transform:translateY(0)} }
+
+  /* ---------- HERO / HEADER ---------- */
+  .eyebrow{
+    font-family:var(--mono); font-size:11px; letter-spacing:0.14em; text-transform:uppercase;
+    color:var(--speco); margin-bottom:10px; display:flex; align-items:center; gap:8px;
+  }
+  h1{ font-size:32px; font-weight:800; letter-spacing:-0.02em; line-height:1.15; margin-bottom:10px; }
+  h1 em{ font-style:normal; color:var(--speco); }
+  .sub{ color:var(--text-dim); font-size:15px; max-width:640px; line-height:1.55; margin-bottom:34px; }
+
+  /* ---------- CALCULATOR LAYOUT ---------- */
+  .calc-grid{ display:grid; grid-template-columns: 340px 1fr; gap:22px; align-items:start; }
+  @media (max-width: 880px){ .calc-grid{ grid-template-columns:1fr; } }
+
+  .panel{
+    background:var(--panel); border:1px solid var(--border-soft); border-radius:var(--radius);
+    padding:22px;
+  }
+  .panel-title{
+    font-size:11px; text-transform:uppercase; letter-spacing:0.1em; color:var(--text-faint);
+    font-weight:700; margin-bottom:16px; font-family:var(--mono);
+  }
+  .field{ margin-bottom:18px; }
+  .field label{ display:block; font-size:12.5px; color:var(--text-dim); margin-bottom:7px; font-weight:600; }
+  .field select, .field input[type=number]{
+    width:100%; background:var(--panel-2); border:1px solid var(--border); color:var(--text);
+    padding:10px 12px; border-radius:7px; font-size:14px; font-family:var(--sans); font-weight:600;
+  }
+  .field select:focus, .field input:focus{ outline:2px solid var(--blue); outline-offset:1px; }
+  .range-row{ display:flex; align-items:center; gap:12px; }
+  .range-row input[type=range]{
+    flex:1; width:100%; accent-color:var(--speco); height:10px; cursor:pointer;
+    -webkit-appearance:none; appearance:none; background:transparent;
+  }
+  .range-row input[type=range]::-webkit-slider-runnable-track{
+    height:10px; border-radius:6px; background:var(--panel-2); border:1px solid var(--border);
+  }
+  .range-row input[type=range]::-webkit-slider-thumb{
+    -webkit-appearance:none; appearance:none; width:24px; height:24px; border-radius:50%;
+    background:var(--speco); border:3px solid var(--panel); margin-top:-8px;
+    box-shadow:0 0 10px rgba(47,224,176,0.5); cursor:pointer;
+  }
+  .range-row input[type=range]::-moz-range-track{
+    height:10px; border-radius:6px; background:var(--panel-2); border:1px solid var(--border);
+  }
+  .range-row input[type=range]::-moz-range-thumb{
+    width:20px; height:20px; border-radius:50%; background:var(--speco); border:3px solid var(--panel);
+    box-shadow:0 0 10px rgba(47,224,176,0.5); cursor:pointer;
+  }
+  .channels-number-row{ display:flex; align-items:center; justify-content:flex-end; gap:8px; margin-top:8px; }
+  .channels-number-label{ font-size:11.5px; color:var(--text-faint); font-weight:600; }
+  .channels-number{
+    width:44px; background:var(--panel-2); border:1px solid var(--border); color:var(--speco);
+    padding:6px 4px; border-radius:6px; font-size:13px; font-weight:700; font-family:var(--mono); text-align:center;
+  }
+  .channels-number:focus{ outline:2px solid var(--blue); outline-offset:1px; }
+  .preset-row{ display:flex; flex-wrap:wrap; gap:6px; margin-top:10px; }
+  .preset-btn{
+    padding:5px 10px; font-size:11.5px; font-family:var(--mono); font-weight:700; color:var(--text-dim);
+    background:var(--panel-2); border:1px solid var(--border); border-radius:6px; cursor:pointer; transition:all .12s;
+  }
+  .preset-btn:hover{ border-color:var(--speco); color:var(--speco); }
+  .preset-btn.active{ background:var(--speco-dim); border-color:var(--speco); color:var(--speco); }
+  .term-toggle{ display:grid; grid-template-columns:repeat(4,1fr); gap:6px; }
+  .term-btn{
+    padding:9px 4px; text-align:center; border-radius:7px; border:1px solid var(--border);
+    background:var(--panel-2); color:var(--text-dim); font-size:12.5px; font-weight:700; cursor:pointer;
+    font-family:var(--mono);
+  }
+  .term-btn.active{ background:var(--speco-dim); border-color:var(--speco); color:var(--speco); }
+  .hint{ font-size:11.5px; color:var(--text-faint); line-height:1.5; margin-top:4px; }
+
+  /* ---------- HUD READOUT (signature element) ---------- */
+  .hud{
+    position:relative; background:var(--panel); border:1px solid var(--border-soft); border-radius:var(--radius);
+    padding:34px 30px 26px; overflow:hidden;
+  }
+  .hud::before, .hud::after, .hud .c2, .hud .c3{
+    content:""; position:absolute; width:22px; height:22px; border-color:var(--speco); opacity:0.8;
+  }
+  .hud::before{ top:14px; left:14px; border-top:2px solid var(--speco); border-left:2px solid var(--speco); }
+  .hud::after{ bottom:14px; right:14px; border-bottom:2px solid var(--speco); border-right:2px solid var(--speco); }
+  .hud .c2{ top:14px; right:14px; border-top:2px solid var(--speco); border-right:2px solid var(--speco); }
+  .hud .c3{ bottom:14px; left:14px; border-bottom:2px solid var(--speco); border-left:2px solid var(--speco); }
+  .rec{ display:flex; align-items:center; gap:8px; font-family:var(--mono); font-size:11px; color:var(--text-faint); letter-spacing:0.1em; margin-bottom:18px; }
+  .rec .dot{ background:var(--gold); box-shadow:0 0 8px var(--gold); }
+  .hud-label{ font-size:12px; color:var(--text-dim); font-weight:600; text-transform:uppercase; letter-spacing:0.08em; margin-bottom:4px; }
+  .hud-number{ font-family:var(--mono); font-weight:800; font-size:52px; color:var(--gold); letter-spacing:-0.02em; line-height:1; text-shadow:0 0 30px rgba(255,193,94,0.25); }
+  .hud-sub{ color:var(--text-dim); font-size:13px; margin-top:6px; }
+
+  .compare-bars{ margin-top:26px; display:flex; flex-direction:column; gap:14px; }
+  .bar-row{ display:grid; grid-template-columns:110px 1fr 90px; align-items:center; gap:12px; }
+  .bar-label{ font-size:12.5px; font-weight:700; color:var(--text-dim); }
+  .bar-label.speco{ color:var(--speco); }
+  .bar-label.rival{ color:var(--rival); }
+  .bar-track{ height:14px; background:var(--panel-2); border-radius:20px; overflow:hidden; border:1px solid var(--border-soft); }
+  .bar-fill{ height:100%; border-radius:20px; transition:width .5s cubic-bezier(.4,0,.2,1); }
+  .bar-fill.speco{ background:linear-gradient(90deg,#17A98A,var(--speco)); }
+  .bar-fill.rival{ background:linear-gradient(90deg,#B23A3A,var(--rival)); }
+  .bar-amt{ font-family:var(--mono); font-weight:700; font-size:13.5px; text-align:right; }
+
+  .stat-row{ display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-top:26px; }
+  .stat{ background:var(--panel-2); border:1px solid var(--border-soft); border-radius:8px; padding:12px 14px; }
+  .stat-label{ font-size:10.5px; color:var(--text-faint); text-transform:uppercase; letter-spacing:0.06em; font-weight:700; margin-bottom:4px; }
+  .stat-val{ font-family:var(--mono); font-weight:700; font-size:17px; color:var(--text); }
+
+  .chart-panel{ margin-top:22px; padding:22px; }
+  .chart-wrap{ height:260px; margin-top:6px; }
+
+  /* ---------- FEATURE TABLE ---------- */
+  .verify-note{
+    display:flex; gap:10px; align-items:flex-start; background:rgba(255,193,94,0.08); border:1px solid rgba(255,193,94,0.25);
+    border-radius:8px; padding:12px 14px; margin-bottom:20px; font-size:12.5px; color:#F0D9AC; line-height:1.5;
+  }
+  .verify-note b{ color:var(--gold); }
+  .legend{ display:flex; gap:18px; margin-bottom:16px; flex-wrap:wrap; }
+  .legend-item{ display:flex; align-items:center; gap:6px; font-size:12px; color:var(--text-dim); }
+  .chip{ width:16px; height:16px; border-radius:4px; display:inline-flex; align-items:center; justify-content:center; font-size:10px; font-weight:800; }
+  .chip.yes{ background:var(--speco-dim); color:var(--speco); border:1px solid var(--speco); }
+  .chip.no{ background:var(--panel-2); color:var(--text-faint); border:1px solid var(--border); }
+  .chip.verify{ background:rgba(255,193,94,0.12); color:var(--gold); border:1px solid rgba(255,193,94,0.4); }
+
+  .ftable-scroll{ overflow-x:auto; border:1px solid var(--border-soft); border-radius:var(--radius); }
+  table.ftable{ width:100%; border-collapse:collapse; font-size:13px; min-width:760px; }
+  table.ftable thead th{
+    position:sticky; top:57px; background:var(--panel-2); text-align:left; padding:12px 14px;
+    font-size:11px; text-transform:uppercase; letter-spacing:0.06em; color:var(--text-dim); border-bottom:1px solid var(--border);
+    z-index:2;
+  }
+  table.ftable thead th.speco-col{ color:var(--speco); }
+  table.ftable tbody tr.cat-row td{
+    background:var(--panel-2); font-family:var(--mono); font-size:11px; text-transform:uppercase; letter-spacing:0.08em;
+    color:var(--text-faint); padding:9px 14px; font-weight:700; border-top:1px solid var(--border-soft); border-bottom:1px solid var(--border-soft);
+  }
+  table.ftable tbody tr.feat-row td{ padding:10px 14px; border-bottom:1px solid var(--border-soft); color:var(--text-dim); vertical-align:middle; }
+  table.ftable tbody tr.feat-row:hover td{ background:rgba(255,255,255,0.015); }
+  table.ftable tbody tr.feat-row td.fname{ color:var(--text); font-weight:500; }
+  td.cell{ text-align:center; }
+  .cell-val{ display:inline-flex; align-items:center; justify-content:center; min-width:26px; }
+  .cell-val.yes{ color:var(--speco); font-weight:800; }
+  .cell-val.no{ color:var(--text-faint); }
+  .cell-val.text{ font-family:var(--mono); font-size:11.5px; color:var(--text-dim); }
+  .speco-cell{ cursor:pointer; border-radius:5px; padding:4px 8px; transition:background .12s; }
+  .speco-cell:hover{ background:rgba(47,224,176,0.1); }
+  .speco-cell.verify-badge{ color:var(--gold); font-size:11px; font-family:var(--mono); border:1px dashed rgba(255,193,94,0.5); }
+  .inline-edit-input{
+    width:100px; background:var(--panel-2); border:1px solid var(--speco); color:var(--text);
+    padding:4px 8px; border-radius:5px; font-size:11.5px; font-family:var(--mono); text-align:center;
+    outline:none;
+  }
+  .form-status{ margin-top:12px; font-size:12.5px; font-weight:600; min-height:1em; }
+  .form-status.error{ color:var(--rival); }
+  .form-status.success{ color:var(--speco); }
+
+  /* ---------- MANAGE VENDORS ---------- */
+  .vendor-list{ display:flex; flex-direction:column; gap:10px; margin-bottom:24px; }
+  .vendor-card{
+    display:flex; align-items:center; justify-content:space-between; background:var(--panel);
+    border:1px solid var(--border-soft); border-radius:9px; padding:14px 18px;
+  }
+  .vendor-id{ display:flex; align-items:center; gap:12px; }
+  .swatch{ width:14px; height:14px; border-radius:4px; }
+  .vendor-name{ font-weight:700; font-size:14.5px; }
+  .vendor-meta{ font-size:12px; color:var(--text-faint); font-family:var(--mono); }
+  .btn{
+    padding:9px 16px; border-radius:7px; border:1px solid var(--border); background:var(--panel-2); color:var(--text);
+    font-size:13px; font-weight:700; cursor:pointer; transition:all .15s;
+  }
+  .btn:hover{ border-color:var(--speco); color:var(--speco); }
+  .btn.primary{ background:linear-gradient(135deg,#17A98A,var(--speco)); border:none; color:#04140F; }
+  .btn.primary:hover{ opacity:.9; color:#04140F; }
+  .btn.ghost{ background:transparent; border-color:var(--border-soft); color:var(--text-faint); }
+  .btn.danger:hover{ border-color:var(--rival); color:var(--rival); }
+  .btn-row{ display:flex; gap:10px; margin-top:6px; }
+
+  .add-form{ display:none; margin-top:18px; padding-top:18px; border-top:1px solid var(--border-soft); }
+  .add-form.open{ display:block; }
+  .form-grid{ display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+  .form-grid .full{ grid-column:1/-1; }
+  .pricing-model-fields{ display:none; }
+  .pricing-model-fields.active{ display:block; }
+  .tier-input-row{ display:grid; grid-template-columns:1fr 90px; gap:8px; align-items:center; margin-bottom:8px; }
+  .tier-input-row span{ font-size:12.5px; color:var(--text-dim); }
+
+  footer{ margin-top:60px; padding-top:24px; border-top:1px solid var(--border-soft); font-size:11.5px; color:var(--text-faint); line-height:1.6; }
+  footer b{ color:var(--text-dim); }
+
+  @media (max-width:640px){
+    .nav{ padding:12px 16px; }
+    .tabs{ display:none; }
+    .wrap{ padding:26px 16px 80px; }
+    h1{ font-size:24px; }
+    .stat-row{ grid-template-columns:repeat(2,1fr); }
+    .form-grid{ grid-template-columns:1fr; }
+  }
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="brand">
+    <div class="brand-mark">S</div>
+    <div class="brand-text">SPECO <span>| Cloud Savings Console</span></div>
+  </div>
+  <div class="tabs">
+    <div class="tab active" data-view="calc">Calculator</div>
+    <div class="tab" data-view="features">Feature Comparison</div>
+    <div class="tab" data-view="vendors">Manage Vendors</div>
+  </div>
+  <div class="nav-note"><span class="dot"></span> LIVE ESTIMATE</div>
+</nav>
+
+<div class="wrap">
+
+  <!-- ===================== CALCULATOR VIEW ===================== -->
+  <section class="view active" id="view-calc">
+    <div class="eyebrow">‣ SecureGuard Cloud vs. the competition</div>
+    <h1>See the savings <em>before you quote it.</em></h1>
+    <p class="sub">Set the channel count and pick a competitor's plan. The console below prices out SecureGuard Cloud against it in real time — monthly, annual, and over the life of the contract.</p>
+
+    <div class="calc-grid">
+      <div class="panel">
+        <div class="panel-title">Configuration</div>
+
+        <div class="field">
+          <label for="channels">Channel count</label>
+          <div class="range-row">
+            <input type="range" id="channelsRange" min="0" max="1000" value="301">
+          </div>
+          <div class="channels-number-row">
+            <span class="channels-number-label">Exact count</span>
+            <input type="number" id="channelsNumber" min="1" max="1000" value="64" class="channels-number">
+          </div>
+          <div class="preset-row" id="presetRow">
+            <button type="button" class="preset-btn" data-ch="8">8</button>
+            <button type="button" class="preset-btn" data-ch="16">16</button>
+            <button type="button" class="preset-btn" data-ch="32">32</button>
+            <button type="button" class="preset-btn" data-ch="64">64</button>
+            <button type="button" class="preset-btn" data-ch="128">128</button>
+            <button type="button" class="preset-btn" data-ch="256">256</button>
+            <button type="button" class="preset-btn" data-ch="500">500</button>
+            <button type="button" class="preset-btn" data-ch="1000">1000</button>
+          </div>
+          <div class="hint">Slider gives finer control under ~250 channels — type an exact number or tap a preset for anything specific.</div>
+        </div>
+
+        <div class="field">
+          <label for="vendorSelect">Compare against</label>
+          <select id="vendorSelect"></select>
+        </div>
+
+        <div class="field" id="tierFieldWrap"></div>
+
+        <div class="field">
+          <label>Contract term</label>
+          <div class="term-toggle" id="termToggle">
+            <div class="term-btn" data-term="1">1 YR</div>
+            <div class="term-btn active" data-term="3">3 YR</div>
+            <div class="term-btn" data-term="5">5 YR</div>
+            <div class="term-btn" data-term="10">10 YR</div>
+          </div>
+        </div>
+
+        <div class="hint" id="specoRateHint"></div>
+        <div class="hint" style="margin-top:8px; color:var(--gold);">+ Cloud video storage (SGC1TB, SGC2TB, SGC4TB, SGC50TB…) is billed separately — add it to the quote on its own line.</div>
+      </div>
+
+      <div>
+        <div class="hud">
+          <span class="c2"></span><span class="c3"></span>
+          <div class="rec"><span class="dot"></span> REC — SAVINGS ESTIMATE</div>
+          <div class="hud-label">Monthly savings with SecureGuard Cloud</div>
+          <div class="hud-number" id="hudMonthly">$0</div>
+          <div class="hud-sub" id="hudSubline">— channels compared —</div>
+
+          <div class="compare-bars">
+            <div class="bar-row">
+              <div class="bar-label speco">Speco</div>
+              <div class="bar-track"><div class="bar-fill speco" id="barSpeco" style="width:0%"></div></div>
+              <div class="bar-amt" id="barSpecoAmt">$0</div>
+            </div>
+            <div class="bar-row">
+              <div class="bar-label rival" id="barRivalLabel">Rival</div>
+              <div class="bar-track"><div class="bar-fill rival" id="barRival" style="width:0%"></div></div>
+              <div class="bar-amt" id="barRivalAmt">$0</div>
+            </div>
+          </div>
+
+          <div class="stat-row">
+            <div class="stat"><div class="stat-label">Monthly</div><div class="stat-val" id="statMonthly">$0</div></div>
+            <div class="stat"><div class="stat-label">Annual</div><div class="stat-val" id="statAnnual">$0</div></div>
+            <div class="stat"><div class="stat-label">Term Total</div><div class="stat-val" id="statTerm">$0</div></div>
+            <div class="stat"><div class="stat-label">10-Year</div><div class="stat-val" id="stat10">$0</div></div>
+          </div>
+        </div>
+
+        <div class="panel chart-panel">
+          <div class="panel-title">Cumulative cost over the contract term</div>
+          <div class="chart-wrap"><canvas id="costChart"></canvas></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== FEATURE COMPARISON VIEW ===================== -->
+  <section class="view" id="view-features">
+    <div class="eyebrow">‣ Line-by-line</div>
+    <h1>Feature comparison</h1>
+    <p class="sub">OpenEye's columns are transcribed directly from their published OWS 24/7 comparison sheet. Speco's column is pre-filled where we found it in public SecureGuard documentation — everything else is flagged for a rep to confirm before it goes in front of a customer.</p>
+
+    <div class="verify-note">
+      ⚠ <div><b>Before you send this to a customer:</b> cells marked <span class="chip verify" style="display:inline-flex;vertical-align:middle;">?</span> are unverified. Click a Yes/No-style Speco cell to cycle it Yes → No → Unverified; click a spec-style Speco cell (numbers/text) to type in the confirmed value. Tier alignment on OpenEye's text-value rows was reconstructed from their PDF layout and is worth a spot-check against the source sheet on rows with unusual wording.</div>
+    </div>
+
+    <div class="legend">
+      <div class="legend-item"><span class="chip yes">✓</span> Included</div>
+      <div class="legend-item"><span class="chip no">–</span> Not included</div>
+      <div class="legend-item"><span class="chip verify">?</span> Needs verification (click to set)</div>
+    </div>
+
+    <div class="ftable-scroll">
+      <table class="ftable">
+        <thead>
+          <tr>
+            <th style="min-width:260px;">Feature</th>
+            <th class="speco-col">SecureGuard Cloud</th>
+            <th>OWS 24/7 Lite</th>
+            <th>OWS 24/7 Standard</th>
+            <th>OWS 24/7 EDU</th>
+            <th>OWS 24/7 Plus</th>
+          </tr>
+        </thead>
+        <tbody id="featureBody"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ===================== MANAGE VENDORS VIEW ===================== -->
+  <section class="view" id="view-vendors">
+    <div class="eyebrow">‣ Extend the console</div>
+    <h1>Manage competitors</h1>
+    <p class="sub">Add another manufacturer — Eagle Eye, Verkada, Rhombus, DW, whoever's on the table — and it shows up as an option in the calculator immediately. Additions live for this browser session; export them to hand off or re-import next time.</p>
+
+    <div class="vendor-list" id="vendorList"></div>
+
+    <div class="btn-row">
+      <button class="btn primary" id="btnShowAdd">+ Add manufacturer</button>
+      <button class="btn ghost" id="btnExport">Export config (.json)</button>
+      <button class="btn ghost" id="btnImportTrigger">Import config (.json)</button>
+      <input type="file" id="fileImport" accept="application/json" style="display:none">
+    </div>
+    <div id="vendorListStatus" class="form-status"></div>
+
+    <div class="panel add-form" id="addForm">
+      <div class="panel-title">New manufacturer</div>
+      <div class="form-grid">
+        <div class="field">
+          <label>Name</label>
+          <input type="text" id="newName" placeholder="e.g. Eagle Eye Networks">
+        </div>
+        <div class="field">
+          <label>Accent color</label>
+          <input type="color" id="newColor" value="#FF6B6B" style="height:42px; padding:4px; cursor:pointer;">
+        </div>
+        <div class="field full">
+          <label>Pricing model</label>
+          <select id="newPricingModel">
+            <option value="flat">Flat rate — one price per channel/month</option>
+            <option value="tiered">Tiered — price varies by dealer level</option>
+          </select>
+        </div>
+
+        <div class="field full pricing-model-fields active" id="flatFields">
+          <label>Price per channel / month ($)</label>
+          <input type="number" id="newFlatRate" step="0.01" placeholder="e.g. 2.50">
+        </div>
+
+        <div class="field full pricing-model-fields" id="tieredFields">
+          <label>Dealer tier pricing ($ / channel / month)</label>
+          <div id="tierInputs"></div>
+          <button class="btn ghost" id="btnAddTier" type="button" style="margin-top:4px;">+ Add tier</button>
+        </div>
+      </div>
+      <div class="btn-row">
+        <button class="btn primary" id="btnSaveVendor">Save manufacturer</button>
+        <button class="btn ghost" id="btnCancelAdd">Cancel</button>
+      </div>
+      <div id="vendorFormStatus" class="form-status"></div>
+    </div>
+  </section>
+
+  <footer>
+    <b>Internal sales tool — Speco Technologies.</b> OpenEye pricing and features sourced from OpenEye's published OWS 24/7 rate card and feature comparison sheet; confirm current rates with your OpenEye rep before quoting, as list pricing changes. SecureGuard Cloud is priced at <b>$1.00/channel/month</b>. Cloud video storage (SGC1TB, SGC2TB, SGC4TB, SGC50TB, etc.) is a separate, optional add-on service with its own fees and is <b>not included</b> in this calculator — add it to a quote separately if the customer needs offsite storage. All competitor data added via Manage Vendors is entered by your team and not independently verified by this tool.
+  </footer>
+</div>
+
+<script>
+// ============================================================
+// DATA
+// ============================================================
+const OPENEYE_TIERS = ["Bronze","Silver","Gold","Platinum","Sapphire"];
+
+const VENDORS = {
+  speco: {
+    // Confirmed rate: $1.00/channel/month for the SecureGuard Cloud VMS service.
+    // Cloud video storage (SGC1TB/2TB/4TB/50TB, etc.) is a separate add-on with its own fee and is NOT modeled here.
+    id:"speco", name:"Speco SecureGuard Cloud", color:"#2FE0B0",
+    pricingModel:"flat", flatRate:1.00, builtIn:true
+  },
+  openeye: {
+    id:"openeye", name:"OpenEye OWS 24/7", color:"#FF6B6B",
+    pricingModel:"tiered_leveled", builtIn:true,
+    levels:{
+      "Lite":  {Bronze:2.40, Silver:2.25, Gold:2.10, Platinum:1.95, Sapphire:1.80, MSRP:3.00},
+      "Standard":{Bronze:4.00, Silver:3.75, Gold:3.50, Platinum:3.25, Sapphire:3.00, MSRP:5.00},
+      "Plus":  {Bronze:6.00, Silver:5.63, Gold:5.25, Platinum:4.88, Sapphire:4.50, MSRP:7.50}
+    }
+  }
+};
+
+// Feature matrix: [name, lite, standard, edu, plus]  true=yes, false/""=no, string=text value
+const FEATURES = [
+["Installation", null],
+["Max Channels Per Server*", "24","128","128","128"],
+["Server OS", "Linux", "Windows / Linux", "Windows / Linux", "Windows / Linux"],
+["Install on 3rd Party Hardware", false, true, true, true],
+
+["Live View", null],
+["PTZ & Joystick Control", false, true, true, true],
+["Relay video stream connection timeout", "10 min","10 min","20 min","30 min"],
+
+["Search", null],
+["Event Search", true, true, true, true],
+["Object Search", false, true, true, true],
+
+["Cloud Recording", null],
+["Priority Event Cloud Recording", false, false, false, true],
+
+["Management", null],
+["Cloud Management", "Standard","Advanced","Advanced","Advanced"],
+["User Permissions & Groups", "Default only", true, true, true],
+["Recorder Groups", false, true, true, true],
+["Remote Client / IP Approved List Controls", false, true, true, true],
+["Health Monitoring", true, true, true, true],
+
+["Networking", null],
+["LAN Smart Forwarding", true, true, true, true],
+
+["Audio", null],
+["IP Audio Recording", false, true, true, true],
+["Two-Way Audio", false, true, true, true],
+
+["Alerts & Reports", null],
+["Alert Types", "Some","All","All","All"],
+["Health Alerts", true, true, true, true],
+["Motion Alerts", true, true, true, true],
+["Notification Types", "Some","All","All","All"],
+["Push Notifications", true, true, true, true],
+["Email Notifications", true, true, true, true],
+["Client Notifications", false, true, true, true],
+["Alert History", "6 months","1 year","1 year","1 year"],
+["Active Alerts", false, true, true, true],
+["Reports", "Some","Some","Some","All"],
+["System Summary Report", true, true, true, true],
+["Inventory Report", true, true, true, true],
+["Thumbnail (Image Verification)", true, true, true, true],
+["Trend (Alerts Visualization)", false, false, false, true],
+
+["Export & Sharing", null],
+["Export video to the cloud", true, true, true, true],
+["Cloud clip storage per device", "2 GB","4 GB","4 GB","6 GB"],
+["Share clips via email", true, true, true, true],
+["Share & manage groups of video clips", false, false, false, true],
+["Export video on local system", true, true, true, true],
+
+["Clients", null],
+["Concurrent Remote Connections*", "5","Unlimited","Unlimited","Unlimited"],
+["Mobile App", true, true, true, true],
+["Cloud Web Client", true, true, true, true],
+
+["Analytics", null],
+["OpenEye Native Analytics", false, "Some","Some","All"],
+["Smart Motion", false, true, true, true],
+["Person / Vehicle Detection", false, false, false, true],
+["Line Crossing / Intrusion", "Coming Soon","Coming Soon","Coming Soon","Coming Soon"],
+["3rd Party Edge Video Analytics***", false, "Some","Some","All"],
+["Area Entered / Area Exited", false, true, true, true],
+["Area Motion / Change in Area", false, true, true, true],
+["Camera Out of Focus / Tampering", false, true, true, true],
+["Line Crossed", false, true, true, true],
+["Loitering", false, true, true, true],
+["Person / Vehicle (edge)", false, true, true, true],
+["Queue Detection", false, true, true, true],
+["Face Detection", false, true, true, true],
+["Mask Detection", false, true, true, true],
+["Elevated Skin Temperature", false, true, true, true],
+["Fog / Smoke Detection", false, true, true, true],
+["License Plate Recognition", false, false, false, true],
+["3rd Party Edge Audio Analytics***", false, "All","All","All"],
+["Gunshot Detection", false, true, true, true],
+["Glass Break Detection", false, true, true, true],
+["Scream Detection", false, true, true, true],
+["Explosion Detection", false, true, true, true],
+
+["Ecosystem Integrations", null],
+["Central Station / Monitoring", true, true, true, true],
+["Alarm.com", true, true, true, true],
+["Intrusion", false, true, true, true],
+["Access Control", false, true, true, true],
+["Environmental Sensors", false, true, true, true],
+["Identity Management", false, false, true, true],
+["3rd Party OWS Data Feed Access", false, true, true, true],
+
+["POS Connect", null],
+["Monthly Fee Per Terminal", "Per terminal","Per terminal","Per terminal","Included w/ Plus"],
+["Transaction History", "6 months","6 months","6 months","1 year"],
+["Transaction Search", true, true, true, true],
+["Receipt Export", true, true, true, true],
+["Client Receipt View", true, true, true, true],
+["POS Alerts", "Standard","Standard","Standard","Advanced"],
+];
+
+// Speco column defaults — confirmed values, everything else starts "unverified"
+// Boolean rows: state: 1 = yes, 0 = no, null = unverified
+const SPECO_CONFIRMED_YES = new Set([
+  "Install on 3rd Party Hardware",
+  "PTZ & Joystick Control",
+  "Event Search",
+  "Object Search",
+  "User Permissions & Groups",
+  "Recorder Groups",
+  "Health Monitoring",
+  "LAN Smart Forwarding",
+  "IP Audio Recording",
+  "Two-Way Audio",
+  "Health Alerts",
+  "Motion Alerts",
+  "Push Notifications",
+  "Email Notifications",
+  "Active Alerts",
+  "System Summary Report",
+  "Inventory Report",
+  "Thumbnail (Image Verification)",
+  "Export video to the cloud",
+  "Share clips via email",
+  "Export video on local system",
+  "Mobile App",
+  "Cloud Web Client",
+  "Smart Motion",
+  "Person / Vehicle Detection",
+  "Area Entered / Area Exited",
+  "Area Motion / Change in Area",
+  "Camera Out of Focus / Tampering",
+  "Line Crossed",
+  "Loitering",
+  "Person / Vehicle (edge)",
+  "Face Detection",
+  "Central Station / Monitoring",
+  "Access Control",
+  "Environmental Sensors"
+]);
+const SPECO_CONFIRMED_NO = new Set([
+  "Priority Event Cloud Recording",
+  "Remote Client / IP Approved List Controls",
+  "Client Notifications",
+  "Trend (Alerts Visualization)",
+  "Share & manage groups of video clips",
+  "OpenEye Native Analytics",
+  "3rd Party Edge Video Analytics***",
+  "Queue Detection",
+  "Mask Detection",
+  "Elevated Skin Temperature",
+  "Fog / Smoke Detection",
+  "License Plate Recognition",
+  "3rd Party Edge Audio Analytics***",
+  "Gunshot Detection",
+  "Glass Break Detection",
+  "Scream Detection",
+  "Explosion Detection",
+  "Alarm.com",
+  "Intrusion",
+  "Identity Management",
+  "3rd Party OWS Data Feed Access",
+  "Transaction Search",
+  "Receipt Export",
+  "Client Receipt View"
+]);
+// Text-value rows: confirmed Speco specs
+const SPECO_TEXT_VALUES_DEFAULT = {
+  "Max Channels Per Server*": "128",
+  "Server OS": "Linux",
+  "Relay video stream connection timeout": "10 min",
+  "Cloud Management": "Advanced",
+  "Alert Types": "ALL",
+  "Notification Types": "ALL",
+  "Alert History": "Some",
+  "Reports": "Some",
+  "Cloud clip storage per device": "$",
+  "Concurrent Remote Connections*": "10",
+  "Line Crossing / Intrusion": "YES",
+  "Monthly Fee Per Terminal": "N/A",
+  "Transaction History": "N/A",
+  "POS Alerts": "N/A"
+};
+
+function isTextRow(row){ return row.slice(1,5).every(v => typeof v === "string"); }
+
+let specoFeatureState = {};
+let specoTextValues = {};
+FEATURES.forEach(row=>{
+  if(row[1]===null) return;
+  if(isTextRow(row)){
+    specoTextValues[row[0]] = SPECO_TEXT_VALUES_DEFAULT[row[0]] || null;
+  } else {
+    specoFeatureState[row[0]] = SPECO_CONFIRMED_YES.has(row[0]) ? 1 : (SPECO_CONFIRMED_NO.has(row[0]) ? 0 : null);
+  }
+});
+
+// ============================================================
+// STATE
+// ============================================================
+let selectedVendorId = "openeye";
+let selectedLevel = "Standard";
+let selectedTier = "Silver";
+let selectedTerm = 3;
+let channels = 64;
+let costChart = null;
+
+// ============================================================
+// HELPERS
+// ============================================================
+const fmt = n => "$" + n.toLocaleString("en-US",{minimumFractionDigits:2, maximumFractionDigits:2});
+const fmtWhole = n => "$" + Math.round(n).toLocaleString("en-US");
+
+function specoRate(){ return VENDORS.speco.flatRate; }
+
+function rivalRate(vendor){
+  if(vendor.pricingModel === "flat") return vendor.flatRate;
+  if(vendor.pricingModel === "tiered") return vendor.tiers[selectedTier];
+  if(vendor.pricingModel === "tiered_leveled") return vendor.levels[selectedLevel][selectedTier];
+  return 0;
+}
+
+// ============================================================
+// TAB SWITCHING
+// ============================================================
+document.querySelectorAll(".tab").forEach(tab=>{
+  tab.addEventListener("click", ()=>{
+    document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));
+    document.querySelectorAll(".view").forEach(v=>v.classList.remove("active"));
+    tab.classList.add("active");
+    document.getElementById("view-"+tab.dataset.view).classList.add("active");
+  });
+});
+
+// ============================================================
+// VENDOR SELECT + TIER FIELDS
+// ============================================================
+function renderVendorSelect(){
+  const sel = document.getElementById("vendorSelect");
+  sel.innerHTML = "";
+  Object.values(VENDORS).filter(v=>v.id!=="speco").forEach(v=>{
+    const opt = document.createElement("option");
+    opt.value = v.id; opt.textContent = v.name;
+    sel.appendChild(opt);
+  });
+  sel.value = selectedVendorId;
+}
+
+function renderTierFields(){
+  const wrap = document.getElementById("tierFieldWrap");
+  const vendor = VENDORS[selectedVendorId];
+  wrap.innerHTML = "";
+
+  if(vendor.pricingModel === "tiered_leveled"){
+    const levelLabel = document.createElement("label");
+    levelLabel.textContent = "Subscription level";
+    const levelSel = document.createElement("select");
+    levelSel.id = "levelSelect";
+    Object.keys(vendor.levels).forEach(lvl=>{
+      const o = document.createElement("option"); o.value=lvl; o.textContent="OWS 24/7 "+lvl; levelSel.appendChild(o);
+    });
+    levelSel.value = selectedLevel;
+    levelSel.addEventListener("change", e=>{ selectedLevel = e.target.value; update(); });
+
+    const tierLabel = document.createElement("label");
+    tierLabel.textContent = "Dealer tier"; tierLabel.style.marginTop="14px";
+    const tierSel = document.createElement("select");
+    tierSel.id = "tierSelect";
+    OPENEYE_TIERS.forEach(t=>{
+      const o = document.createElement("option"); o.value=t; o.textContent=t; tierSel.appendChild(o);
+    });
+    tierSel.value = selectedTier;
+    tierSel.addEventListener("change", e=>{ selectedTier = e.target.value; update(); });
+
+    wrap.appendChild(levelLabel); wrap.appendChild(levelSel);
+    const spacer = document.createElement("div"); spacer.style.height="14px"; wrap.appendChild(spacer);
+    wrap.appendChild(tierLabel); wrap.appendChild(tierSel);
+
+  } else if(vendor.pricingModel === "tiered"){
+    const tierLabel = document.createElement("label");
+    tierLabel.textContent = "Dealer tier";
+    const tierSel = document.createElement("select");
+    Object.keys(vendor.tiers).forEach(t=>{
+      const o = document.createElement("option"); o.value=t; o.textContent=t+" — $"+vendor.tiers[t].toFixed(2)+"/ch/mo"; tierSel.appendChild(o);
+    });
+    tierSel.value = selectedTier in vendor.tiers ? selectedTier : Object.keys(vendor.tiers)[0];
+    selectedTier = tierSel.value;
+    tierSel.addEventListener("change", e=>{ selectedTier = e.target.value; update(); });
+    wrap.appendChild(tierLabel); wrap.appendChild(tierSel);
+  } else {
+    const note = document.createElement("div");
+    note.className = "hint";
+    note.textContent = "Flat rate: $" + vendor.flatRate.toFixed(2) + " / channel / month.";
+    wrap.appendChild(note);
+  }
+}
+
+document.getElementById("vendorSelect").addEventListener("change", e=>{
+  selectedVendorId = e.target.value;
+  const vendor = VENDORS[selectedVendorId];
+  if(vendor.pricingModel === "tiered_leveled"){ selectedLevel = Object.keys(vendor.levels)[0]; selectedTier="Silver"; }
+  if(vendor.pricingModel === "tiered"){ selectedTier = Object.keys(vendor.tiers)[0]; }
+  renderTierFields();
+  update();
+});
+
+// ============================================================
+// TERM TOGGLE
+// ============================================================
+document.getElementById("termToggle").addEventListener("click", e=>{
+  const btn = e.target.closest(".term-btn");
+  if(!btn) return;
+  document.querySelectorAll(".term-btn").forEach(b=>b.classList.remove("active"));
+  btn.classList.add("active");
+  selectedTerm = parseInt(btn.dataset.term,10);
+  update();
+});
+
+// ============================================================
+// CHANNEL RANGE — curved slider (finer control at low counts) + direct entry + presets
+// ============================================================
+const channelsRange = document.getElementById("channelsRange");
+const channelsNumber = document.getElementById("channelsNumber");
+const CHANNEL_MAX = 1000;
+const CHANNEL_CURVE = 2.3; // >1 skews more slider travel toward the low end
+
+function rawToChannels(raw){
+  const t = raw / 1000;
+  return Math.max(1, Math.min(CHANNEL_MAX, Math.round(1 + (CHANNEL_MAX - 1) * Math.pow(t, CHANNEL_CURVE))));
+}
+function channelsToRaw(ch){
+  const t = Math.pow((ch - 1) / (CHANNEL_MAX - 1), 1 / CHANNEL_CURVE);
+  return Math.round(t * 1000);
+}
+
+function setChannels(ch, opts={}){
+  channels = Math.max(1, Math.min(CHANNEL_MAX, Math.round(ch)));
+  if(!opts.skipSlider) channelsRange.value = channelsToRaw(channels);
+  if(!opts.skipNumber) channelsNumber.value = channels;
+  document.querySelectorAll(".preset-btn").forEach(b=>{
+    b.classList.toggle("active", parseInt(b.dataset.ch,10) === channels);
+  });
+  update();
+}
+
+channelsRange.addEventListener("input", e=>{
+  setChannels(rawToChannels(parseInt(e.target.value,10)), { skipSlider:true });
+});
+channelsNumber.addEventListener("input", e=>{
+  const val = parseInt(e.target.value,10);
+  if(!isNaN(val)) setChannels(val, { skipNumber:true });
+});
+channelsNumber.addEventListener("blur", ()=>{ channelsNumber.value = channels; });
+document.getElementById("presetRow").addEventListener("click", e=>{
+  const btn = e.target.closest(".preset-btn");
+  if(!btn) return;
+  setChannels(parseInt(btn.dataset.ch,10));
+});
+
+// ============================================================
+// MAIN UPDATE
+// ============================================================
+function update(){
+  const vendor = VENDORS[selectedVendorId];
+  const rRate = rivalRate(vendor);
+  const sRate = specoRate();
+
+  const specoMonthly = channels * sRate;
+  const rivalMonthly = channels * rRate;
+  const savingsMonthly = rivalMonthly - specoMonthly;
+  const savingsAnnual = savingsMonthly * 12;
+  const savingsTerm = savingsMonthly * 12 * selectedTerm;
+  const savings10 = savingsMonthly * 120;
+
+  document.getElementById("hudMonthly").textContent = fmtWhole(savingsMonthly);
+  document.getElementById("hudSubline").textContent = `${channels} channels · SecureGuard Cloud $${sRate.toFixed(2)}/ch vs ${vendor.name} $${rRate.toFixed(2)}/ch`;
+
+  const maxRate = Math.max(sRate, rRate, 0.01);
+  document.getElementById("barSpeco").style.width = (sRate/maxRate*100)+"%";
+  document.getElementById("barRival").style.width = (rRate/maxRate*100)+"%";
+  document.getElementById("barSpecoAmt").textContent = fmt(specoMonthly)+"/mo";
+  document.getElementById("barRivalAmt").textContent = fmt(rivalMonthly)+"/mo";
+  document.getElementById("barRivalLabel").textContent = vendor.name.split(" ")[0];
+
+  document.getElementById("statMonthly").textContent = fmtWhole(savingsMonthly);
+  document.getElementById("statAnnual").textContent = fmtWhole(savingsAnnual);
+  document.getElementById("statTerm").textContent = fmtWhole(savingsTerm);
+  document.getElementById("stat10").textContent = fmtWhole(savings10);
+
+  document.getElementById("specoRateHint").textContent =
+    "SecureGuard Cloud rate: $"+sRate.toFixed(2)+"/channel/month. Cloud video storage (SGC1TB, SGC2TB, etc.) is a separate add-on with its own fee — not included here.";
+
+  updateChart(specoMonthly, rivalMonthly, vendor.name);
+}
+
+function updateChart(specoMonthly, rivalMonthly, rivalName){
+  const months = selectedTerm * 12;
+  const labels = [];
+  const specoData = [];
+  const rivalData = [];
+  for(let m=1; m<=months; m++){
+    labels.push("Mo "+m);
+    specoData.push(Math.round(specoMonthly*m));
+    rivalData.push(Math.round(rivalMonthly*m));
+  }
+  const ctx = document.getElementById("costChart").getContext("2d");
+  if(costChart) costChart.destroy();
+  costChart = new Chart(ctx, {
+    type:"line",
+    data:{
+      labels,
+      datasets:[
+        { label:"Speco SecureGuard Cloud", data:specoData, borderColor:"#2FE0B0", backgroundColor:"rgba(47,224,176,0.08)", fill:true, tension:0.25, pointRadius:0, borderWidth:2.5 },
+        { label:rivalName, data:rivalData, borderColor:"#FF6B6B", backgroundColor:"rgba(255,107,107,0.06)", fill:true, tension:0.25, pointRadius:0, borderWidth:2.5 }
+      ]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      interaction:{ mode:"index", intersect:false },
+      plugins:{
+        legend:{ labels:{ color:"#92A6C2", font:{ family:"Inter", size:11, weight:600 }, usePointStyle:true, boxWidth:8 } },
+        tooltip:{ backgroundColor:"#0C1626", borderColor:"#1F3049", borderWidth:1, titleColor:"#EAF1FA", bodyColor:"#92A6C2", padding:10,
+          callbacks:{ label: c => c.dataset.label+": $"+c.parsed.y.toLocaleString() } }
+      },
+      scales:{
+        x:{ ticks:{ color:"#5B7092", maxTicksLimit:8, font:{size:10} }, grid:{ color:"#182640" } },
+        y:{ ticks:{ color:"#5B7092", font:{size:10}, callback:v=>"$"+v.toLocaleString() }, grid:{ color:"#182640" } }
+      }
+    }
+  });
+}
+
+// ============================================================
+// FEATURE TABLE RENDER
+// ============================================================
+function cellHtml(val){
+  if(val === true) return `<span class="cell-val yes">✓</span>`;
+  if(val === false || val === "") return `<span class="cell-val no">–</span>`;
+  return `<span class="cell-val text">${val}</span>`;
+}
+
+function specoCellHtml(row){
+  const name = row[0];
+  if(isTextRow(row)){
+    const val = specoTextValues[name];
+    if(val) return `<span class="cell-val text speco-cell speco-text-cell" data-feat="${name}">${val}</span>`;
+    return `<span class="cell-val speco-cell verify-badge speco-text-cell" data-feat="${name}">?</span>`;
+  }
+  const state = specoFeatureState[name];
+  if(state === 1) return `<span class="cell-val yes speco-cell speco-bool-cell" data-feat="${name}">✓</span>`;
+  if(state === 0) return `<span class="cell-val no speco-cell speco-bool-cell" data-feat="${name}">–</span>`;
+  return `<span class="cell-val speco-cell verify-badge speco-bool-cell" data-feat="${name}">?</span>`;
+}
+
+function renderFeatureTable(){
+  const body = document.getElementById("featureBody");
+  body.innerHTML = "";
+  FEATURES.forEach(row=>{
+    const [name, lite, standard, edu, plus] = row;
+    if(lite === null){
+      body.insertAdjacentHTML("beforeend", `<tr class="cat-row"><td colspan="6">${name}</td></tr>`);
+      return;
+    }
+    body.insertAdjacentHTML("beforeend", `
+      <tr class="feat-row">
+        <td class="fname">${name}</td>
+        <td class="cell">${specoCellHtml(row)}</td>
+        <td class="cell">${cellHtml(lite)}</td>
+        <td class="cell">${cellHtml(standard)}</td>
+        <td class="cell">${cellHtml(edu)}</td>
+        <td class="cell">${cellHtml(plus)}</td>
+      </tr>
+    `);
+  });
+
+  body.querySelectorAll(".speco-bool-cell").forEach(cell=>{
+    cell.addEventListener("click", ()=>{
+      const feat = cell.dataset.feat;
+      const cur = specoFeatureState[feat];
+      const next = cur === 1 ? 0 : (cur === 0 ? null : 1);
+      specoFeatureState[feat] = next;
+      renderFeatureTable();
+    });
+  });
+
+  body.querySelectorAll(".speco-text-cell").forEach(cell=>{
+    cell.addEventListener("click", ()=>startInlineEdit(cell));
+  });
+}
+
+function startInlineEdit(cell){
+  const feat = cell.dataset.feat;
+  const cur = specoTextValues[feat] || "";
+  const input = document.createElement("input");
+  input.type = "text";
+  input.value = cur;
+  input.className = "inline-edit-input";
+  input.placeholder = "value…";
+  cell.replaceWith(input);
+  input.focus();
+  input.select();
+
+  let committed = false;
+  function commit(){
+    if(committed) return;
+    committed = true;
+    const val = input.value.trim();
+    specoTextValues[feat] = val === "" ? null : val;
+    renderFeatureTable();
+  }
+  input.addEventListener("blur", commit);
+  input.addEventListener("keydown", e=>{
+    if(e.key === "Enter") input.blur();
+    if(e.key === "Escape"){ committed = true; renderFeatureTable(); }
+  });
+}
+
+// ============================================================
+// MANAGE VENDORS VIEW
+// ============================================================
+function renderVendorList(){
+  const list = document.getElementById("vendorList");
+  list.innerHTML = "";
+  Object.values(VENDORS).forEach(v=>{
+    const meta = v.pricingModel === "flat"
+      ? `$${v.flatRate.toFixed(2)}/ch/mo · flat`
+      : v.pricingModel === "tiered"
+        ? Object.keys(v.tiers).length+" tier(s) · tiered"
+        : Object.keys(v.levels).length+" level(s) × "+OPENEYE_TIERS.length+" tiers";
+    const card = document.createElement("div");
+    card.className = "vendor-card";
+    card.innerHTML = `
+      <div class="vendor-id">
+        <span class="swatch" style="background:${v.color}"></span>
+        <div>
+          <div class="vendor-name">${v.name}${v.builtIn ? " <span style='color:var(--text-faint);font-weight:500;font-size:11px;'>(built-in)</span>" : ""}</div>
+          <div class="vendor-meta">${meta}</div>
+        </div>
+      </div>
+      ${v.builtIn ? "" : `<button class="btn ghost danger" data-remove="${v.id}">Remove</button>`}
+    `;
+    list.appendChild(card);
+  });
+  list.querySelectorAll("[data-remove]").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      delete VENDORS[btn.dataset.remove];
+      if(selectedVendorId === btn.dataset.remove) selectedVendorId = "openeye";
+      renderVendorList(); renderVendorSelect(); renderTierFields(); update();
+    });
+  });
+}
+
+document.getElementById("btnShowAdd").addEventListener("click", ()=>{
+  document.getElementById("addForm").classList.add("open");
+});
+document.getElementById("btnCancelAdd").addEventListener("click", ()=>{
+  document.getElementById("addForm").classList.remove("open");
+});
+
+document.getElementById("newPricingModel").addEventListener("change", e=>{
+  document.getElementById("flatFields").classList.toggle("active", e.target.value==="flat");
+  document.getElementById("tieredFields").classList.toggle("active", e.target.value==="tiered");
+});
+
+let tierInputCount = 0;
+function addTierInputRow(name=""){
+  tierInputCount++;
+  const div = document.createElement("div");
+  div.className = "tier-input-row";
+  div.innerHTML = `
+    <input type="text" placeholder="Tier name (e.g. Standard)" value="${name}" class="tier-name">
+    <input type="number" step="0.01" placeholder="$/ch/mo" class="tier-rate">
+  `;
+  document.getElementById("tierInputs").appendChild(div);
+}
+document.getElementById("btnAddTier").addEventListener("click", ()=>addTierInputRow());
+addTierInputRow("Standard");
+
+function showStatus(elId, msg, isError){
+  const el = document.getElementById(elId);
+  el.textContent = msg;
+  el.className = "form-status " + (isError ? "error" : "success");
+}
+
+document.getElementById("btnSaveVendor").addEventListener("click", ()=>{
+  const name = document.getElementById("newName").value.trim();
+  if(!name){ showStatus("vendorFormStatus","Give the manufacturer a name first.", true); return; }
+  const color = document.getElementById("newColor").value;
+  const model = document.getElementById("newPricingModel").value;
+  const id = "v_"+name.toLowerCase().replace(/[^a-z0-9]+/g,"_")+"_"+Date.now();
+
+  let vendor = { id, name, color, pricingModel:model, builtIn:false };
+  if(model === "flat"){
+    const rate = parseFloat(document.getElementById("newFlatRate").value);
+    if(isNaN(rate)){ showStatus("vendorFormStatus","Enter a rate per channel.", true); return; }
+    vendor.flatRate = rate;
+  } else {
+    const tiers = {};
+    document.querySelectorAll(".tier-input-row").forEach(row=>{
+      const tName = row.querySelector(".tier-name").value.trim();
+      const tRate = parseFloat(row.querySelector(".tier-rate").value);
+      if(tName && !isNaN(tRate)) tiers[tName] = tRate;
+    });
+    if(Object.keys(tiers).length === 0){ showStatus("vendorFormStatus","Add at least one tier with a rate.", true); return; }
+    vendor.tiers = tiers;
+  }
+
+  VENDORS[id] = vendor;
+  document.getElementById("addForm").classList.remove("open");
+  document.getElementById("newName").value = "";
+  document.getElementById("newFlatRate").value = "";
+  document.getElementById("tierInputs").innerHTML = ""; addTierInputRow("Standard");
+  document.getElementById("vendorFormStatus").textContent = "";
+
+  renderVendorList(); renderVendorSelect();
+  selectedVendorId = id;
+  document.getElementById("vendorSelect").value = id;
+  if(model==="tiered") selectedTier = Object.keys(vendor.tiers)[0];
+  renderTierFields(); update();
+  showStatus("vendorListStatus", `${name} added.`, false);
+});
+
+document.getElementById("btnExport").addEventListener("click", ()=>{
+  const data = JSON.stringify({ vendors: VENDORS, specoFeatureState, specoTextValues }, null, 2);
+  const blob = new Blob([data], {type:"application/json"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = "speco-savings-config.json"; a.click();
+  URL.revokeObjectURL(url);
+});
+
+document.getElementById("btnImportTrigger").addEventListener("click", ()=>{
+  document.getElementById("fileImport").click();
+});
+document.getElementById("fileImport").addEventListener("change", e=>{
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = evt=>{
+    try{
+      const data = JSON.parse(evt.target.result);
+      if(data.vendors){
+        Object.keys(VENDORS).forEach(k=>{ if(!VENDORS[k].builtIn) delete VENDORS[k]; });
+        Object.assign(VENDORS, data.vendors);
+        // re-lock builtIn flags for safety
+        VENDORS.speco.builtIn = true; VENDORS.openeye.builtIn = true;
+      }
+      if(data.specoFeatureState) specoFeatureState = data.specoFeatureState;
+      if(data.specoTextValues) specoTextValues = data.specoTextValues;
+      renderVendorList(); renderVendorSelect(); renderTierFields(); renderFeatureTable(); update();
+      showStatus("vendorListStatus", "Config imported.", false);
+    }catch(err){ showStatus("vendorListStatus", "Couldn't read that file — is it a config exported from this tool?", true); }
+  };
+  reader.readAsText(file);
+});
+
+// ============================================================
+// INIT
+// ============================================================
+renderVendorSelect();
+renderTierFields();
+renderVendorList();
+renderFeatureTable();
+setChannels(64);
+</script>
+</body>
+</html>
